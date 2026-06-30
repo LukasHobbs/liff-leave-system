@@ -18,6 +18,33 @@
         <p class="mt-3 text-slate-400 text-xs">กำลังโหลดข้อมูลระบบ...</p>
     </div>
 
+    <div id="registerPage" class="fixed inset-0 bg-[#f4f6fa] flex flex-col justify-between z-40 hidden">
+        <div class="bg-[#1e40af] text-white px-6 py-12 rounded-b-[2.5rem] shadow-md flex flex-col items-center text-center">
+            <div class="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center text-3xl mb-4 shadow-inner">🔑</div>
+            <h2 class="text-xl font-bold tracking-wide">ลงทะเบียนผูกบัญชี</h2>
+            <p class="text-xs text-blue-100 opacity-80 mt-1 max-w-xs">กรุณากรอกรหัสพนักงานและชื่อของคุณ เพื่อยืนยันและผูกสิทธิ์เข้าใช้งานระบบใบลาออนไลน์</p>
+        </div>
+        
+        <main class="px-5 py-6 flex-1 max-w-md w-full mx-auto -mt-6">
+            <div class="bg-white rounded-2xl p-6 shadow-xl border border-slate-100 space-y-4">
+                <form id="registerForm" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">รหัสพนักงาน</label>
+                        <input type="text" id="regEmpId" placeholder="ตัวอย่าง: EMP2026-001" class="w-full border border-slate-200 rounded-xl p-3 text-sm bg-white focus:outline-none focus:border-blue-500 font-mono uppercase" required>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">ชื่อ - นามสกุล (ภาษาไทย)</label>
+                        <input type="text" id="regName" placeholder="กรอกชื่อและนามสกุลจริง" class="w-full border border-slate-200 rounded-xl p-3 text-sm bg-white focus:outline-none focus:border-blue-500" required>
+                    </div>
+                    <button type="submit" class="w-full bg-[#1e40af] hover:bg-blue-800 text-white font-medium py-3 rounded-xl shadow-md transition text-sm mt-4">
+                        ยืนยันการผูกบัญชีไลน์
+                    </button>
+                </form>
+            </div>
+        </main>
+        <p class="text-center text-[11px] text-slate-400 pb-6">ระบบตรวจสอบข้อมูลพนักงานอัตโนมัติ</p>
+    </div>
+
     <div class="bg-[#1e40af] text-white px-5 py-4 flex items-center gap-3 shadow-sm">
         <img id="userPicture" src="https://via.placeholder.com/150" alt="Avatar" class="w-12 h-12 rounded-2xl border border-white/20 object-cover bg-white">
         <div>
@@ -110,10 +137,7 @@
                 </div>
                 <button onclick="closeQuotaModal()" class="text-slate-400 hover:text-slate-600 font-bold text-sm bg-slate-100 px-3 py-1 rounded-xl">ปิด</button>
             </div>
-            
-            <div id="quotaContainer" class="overflow-y-auto py-4 space-y-4 flex-1 text-sm">
-                </div>
-            
+            <div id="quotaContainer" class="overflow-y-auto py-4 space-y-4 flex-1 text-sm"></div>
             <p class="text-center text-[10px] text-slate-400 mt-2">หมายเหตุ: ข้อมูลอัปเดตล่าสุดตามระบบฐานข้อมูล HR</p>
         </div>
     </div>
@@ -125,6 +149,7 @@
 
         let globalEmpId = "";
         let globalQuota = {};
+        let lineProfileUserId = ""; // 🌟 ตัวแปรเก็บคู่หูไลน์ไอดีเพื่อใช้ผูกบัญชีครั้งแรก
 
         async function initLiff() {
             try {
@@ -142,19 +167,25 @@
         }
 
         function fetchEmployeeData(userId, displayName) {
+            lineProfileUserId = userId; // บันทึกค่าไอดีไลน์ลงหน่วยความจำชั่วคราว
+            
             fetch(`${GAS_WEB_APP_URL}?action=getProfile&userId=${userId}`)
                 .then(res => res.json())
                 .then(data => {
                     document.getElementById("loading").classList.add("hidden");
                     if (data.status === "success") {
+                        // 🟢 พนักงานเก่า (มีข้อมูลอยู่แล้ว): สั่งซ่อนหน้าลงทะเบียน และเปิดสิทธิ์เข้าหน้าฟอร์มปกติ
+                        document.getElementById("registerPage").classList.add("hidden");
+                        
                         globalEmpId = data.employee.empId;
                         document.getElementById("userName").innerText = data.employee.name;
                         document.getElementById("userSubInfo").innerText = `แผนก: ${data.employee.dept} | ตำแหน่ง: ${data.employee.position}`;
                         globalQuota = data.quota;
                         updateQuotaLabel("ลาป่วย");
                     } else {
-                        document.getElementById("userName").innerText = displayName;
-                        alert(data.message);
+                        // 🟡 พนักงานใหม่ (เข้าใช้งานครั้งแรก): สั่งดีดหน้าผูกบัญชีขึ้นมาบล็อกจอ
+                        document.getElementById("registerPage").classList.remove("hidden");
+                        document.getElementById("regName").value = displayName; // แอบใส่ชื่อไลน์ให้เบื้องต้นเพื่อความสะดวก
                     }
                 })
                 .catch(err => {
@@ -162,6 +193,34 @@
                     alert("⚠️ เปิดแอปและดึงข้อมูลโปรไฟล์ไม่สำเร็จเนื่องจากติดปัญหาดึงสิทธิ์ (CORS/URL)");
                 });
         }
+
+        // 🔑 🌟 ปุ่มยืนยันระบบการผูกบัญชีไลน์ครั้งแรกลงฐานข้อมูล Sheets
+        document.getElementById("registerForm").addEventListener("submit", function(e) {
+            e.preventDefault();
+            const inputEmpId = document.getElementById("regEmpId").value.trim();
+            const inputName = document.getElementById("regName").value.trim();
+            
+            if (!lineProfileUserId) return alert("ไม่พบรหัสสิทธิ์ไลน์ ไม่สามารถลงทะเบียนได้");
+            document.getElementById("loading").classList.remove("hidden");
+
+            // ยิงข้อมูลไปผูกความสัมพันธ์ผ่านเงื่อนไข "registerUser" หลังบ้าน
+            fetch(`${GAS_WEB_APP_URL}?action=registerUser&userId=${lineProfileUserId}&empId=${inputEmpId}&name=${encodeURIComponent(inputName)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        alert("🎉 ผูกบัญชีสำเร็จเรียบร้อยแล้ว!\nระบบทำการเชื่อมต่อบัญชีไลน์ของคุณเข้ากับระบบฐานข้อมูลหลักแล้วครับ");
+                        // ดึงข้อมูลใหม่อีกรอบเพื่อพาสิทธิ์วิ่งสลับเข้าสู่หน้าฟอร์มใบลาทันที
+                        fetchEmployeeData(lineProfileUserId, inputName);
+                    } else {
+                        document.getElementById("loading").classList.add("hidden");
+                        alert(data.message); // เด้งเตือน เช่น ไม่พบรหัสพนักงานนี้ในตาราง Sheets
+                    }
+                })
+                .catch(err => {
+                    document.getElementById("loading").classList.add("hidden");
+                    alert("❌ เชื่อมต่อระบบลงทะเบียนล้มเหลว กรุณาลองใหม่อีกครั้ง");
+                });
+        });
 
         function updateQuotaLabel(type) {
             if (!globalQuota.sickTotal) return;
@@ -172,7 +231,6 @@
             document.getElementById("quotaLabel").innerText = `คงเหลือ ${total - used} วัน`;
         }
 
-        // 🌓 🌕 ฟังก์ชันคำนวณจำนวนวันลาอัตโนมัติ (เวอร์ชันเปิด-ปิดล็อกช่อง endDate อย่างสมบูรณ์)
         function calculateLeaveDays() {
             const leaveFormat = document.getElementById("leaveFormat").value;
             const startDateInput = document.getElementById("startDate").value;
@@ -181,22 +239,18 @@
 
             if (!startDateInput) return;
 
-            // 1. กรณีลา "ครึ่งวันเช้า" หรือ "ครึ่งวันบ่าย"
             if (leaveFormat === "ครึ่งวันเช้า" || leaveFormat === "ครึ่งวันบ่าย") {
                 document.getElementById("endDate").value = startDateInput;
                 document.getElementById("endDate").readOnly = true; 
                 document.getElementById("endDate").classList.add("bg-slate-100");
-                
                 totalDaysInput.value = "0.5 วัน";
                 return;
             }
 
-            // 2. กรณีลา "เต็มวัน" -> ปลดล็อกทุกอย่างเพื่อให้เลือกวันที่สิ้นสุดได้เอง
             document.getElementById("endDate").disabled = false;
             document.getElementById("endDate").readOnly = false; 
             document.getElementById("endDate").classList.remove("bg-slate-100");
 
-            // ถ้าสลับกลับมาจากครึ่งวัน ให้เคลียร์ช่องเพื่อป้องกันค่าค้างคัดลอก
             if (leaveFormat === "เต็มวัน" && totalDaysInput.value === "0.5 วัน") {
                 document.getElementById("endDate").value = "";
                 totalDaysInput.value = "";
@@ -206,7 +260,6 @@
 
             const start = new Date(startDateInput);
             const end = new Date(endDateInput);
-
             const timeDiff = end.getTime() - start.getTime();
             const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1;
 
@@ -216,17 +269,14 @@
                 totalDaysInput.value = "";
                 return;
             }
-
             totalDaysInput.value = daysDiff + " วัน";
         }
 
-        // 🔓 🌟 ฟังก์ชันเปิดหน้าต่างประวัติการลา และยิงข้อมูลไปขอประวัติจาก Sheets (เวอร์ชันแก้บั๊กวันถอยหลัง)
         function openHistoryModal() {
             if (!globalEmpId) return alert("ไม่สามารถดึงประวัติได้ เนื่องจากไม่พบรหัสพนักงาน");
             
             const modal = document.getElementById("historyModal");
             modal.classList.remove("hidden");
-            
             const listContainer = document.getElementById("historyList");
             listContainer.innerHTML = '<p class="text-center text-slate-400 py-10 animate-pulse">กำลังโหลดประวัติ...</p>';
 
@@ -235,13 +285,11 @@
                 .then(response => {
                     if (response.status === "success" && response.data.length > 0) {
                         listContainer.innerHTML = ""; 
-                        
-                        // 🇹🇭 ตัวแปลงเขตเวลาป้องกันวันถอยหลัง 1 วัน
                         const formatDateTH = (dateStr) => {
                             if (!dateStr) return "-";
                             const d = new Date(dateStr);
                             if (isNaN(d.getTime())) return dateStr.split("T")[0]; 
-                            const tzOffset = 7 * 60 * 60 * 1000; // +7 ชั่วโมง
+                            const tzOffset = 7 * 60 * 60 * 1000; 
                             const localDate = new Date(d.getTime() + tzOffset);
                             return localDate.toISOString().split("T")[0];
                         };
@@ -280,28 +328,22 @@
                 });
         }
 
-        // 🔒 ฟังก์ชันสั่งซ่อนหน้าต่างป๊อปอัปประวัติ
         function closeHistoryModal() {
             document.getElementById("historyModal").classList.add("hidden");
         }
 
-        // 📊 🔓 ฟังก์ชันเปิดหน้าต่างโควตาวันลาคงเหลือ และฉีดดีไซน์การ์ดสวยงามมีอิโมจิ
         function openQuotaModal() {
             if (!globalQuota || globalQuota.sickTotal === undefined) {
                 return alert("กำลังโหลดข้อมูลระบบ หรือไม่พบข้อมูลสิทธิ์วันลาของคุณ");
             }
-            
             const modal = document.getElementById("quotaModal");
             modal.classList.remove("hidden");
-            
             const container = document.getElementById("quotaContainer");
             
-            // คำนวณยอดคงเหลือของแต่ละประเภทลา
             let sickLeft = globalQuota.sickTotal - globalQuota.sickUsed;
             let personalLeft = globalQuota.personalTotal - globalQuota.personalUsed;
             let vacationLeft = globalQuota.vacationTotal - globalQuota.vacationUsed;
 
-            // ฉีดโครงสร้าง HTML การ์ดสามสี ดีไซน์มินิมอล มีอิโมจิและเกจแถบพลังความคืบหน้า
             container.innerHTML = `
                 <div class="border border-red-100 rounded-2xl p-4 bg-gradient-to-br from-red-50/50 to-white shadow-sm">
                     <div class="flex justify-between items-center">
@@ -318,7 +360,6 @@
                         </div>
                     </div>
                 </div>
-
                 <div class="border border-amber-100 rounded-2xl p-4 bg-gradient-to-br from-amber-50/50 to-white shadow-sm">
                     <div class="flex justify-between items-center">
                         <div class="flex items-center gap-3">
@@ -334,7 +375,6 @@
                         </div>
                     </div>
                 </div>
-
                 <div class="border border-blue-100 rounded-2xl p-4 bg-gradient-to-br from-blue-50/50 to-white shadow-sm">
                     <div class="flex justify-between items-center">
                         <div class="flex items-center gap-3">
@@ -353,12 +393,10 @@
             `;
         }
 
-        // 📊 🔒 ฟังก์ชันสั่งซ่อนหน้าต่างป๊อปอัปยอดคงเหลือ
         function closeQuotaModal() {
             document.getElementById("quotaModal").classList.add("hidden");
         }
 
-        // 🔌 สั่งเชื่อมสายไฟดักจับสัญญาณเพื่อคำนวณ Real-time
         document.getElementById("leaveFormat").addEventListener("change", calculateLeaveDays);
         document.getElementById("startDate").addEventListener("change", calculateLeaveDays);
         document.getElementById("endDate").addEventListener("change", calculateLeaveDays);
