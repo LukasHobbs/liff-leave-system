@@ -187,6 +187,14 @@
             totalDaysInput.value = daysDiff + " วัน";
         }
 
+        // 🔌 สั่งเชื่อมสายไฟดักจับสัญญาณ: เมื่อมีการเปลี่ยนค่าในฟอร์ม ให้สั่งคำนวณ Real-time ทันที
+        document.getElementById("leaveFormat").addEventListener("change", calculateLeaveDays);
+        document.getElementById("startDate").addEventListener("change", calculateLeaveDays);
+        document.getElementById("endDate").addEventListener("change", calculateLeaveDays);
+        
+        // 🚨 แถมให้อีก 1 เส้น: เมื่อพนักงานเปลี่ยนประเภทการลา (ลาป่วย/ลากิจ) ให้รีเซ็ตการคำนวณใหม่ด้วย ป้องกันค่าเพี้ยน
+        document.getElementById("leaveType").addEventListener("change", calculateLeaveDays);
+
         document.getElementById("leaveType").addEventListener("change", function() { updateQuotaLabel(this.value); });
 
         document.getElementById("leaveForm").addEventListener("submit", function(e) {
