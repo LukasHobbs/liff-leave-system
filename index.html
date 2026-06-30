@@ -203,7 +203,7 @@
             totalDaysInput.value = daysDiff + " วัน";
         }
 
-        // 🔓 🌟 ฟังก์ชันเปิดหน้าต่างประวัติการลา และยิงข้อมูลไปขอประวัติจาก Sheets
+        // 🔓 🌟 ฟังก์ชันเปิดหน้าต่างประวัติการลา และยิงข้อมูลไปขอประวัติจาก Sheets (เวอร์ชันแก้บั๊กวันถอยหลัง)
         function openHistoryModal() {
             if (!globalEmpId) return alert("ไม่สามารถดึงประวัติได้ เนื่องจากไม่พบรหัสพนักงาน");
             
@@ -219,14 +219,23 @@
                     if (response.status === "success" && response.data.length > 0) {
                         listContainer.innerHTML = ""; 
                         
+                        // 🇹🇭 ตัวแปลงเขตเวลาป้องกันวันถอยหลัง 1 วัน
+                        const formatDateTH = (dateStr) => {
+                            if (!dateStr) return "-";
+                            const d = new Date(dateStr);
+                            if (isNaN(d.getTime())) return dateStr.split("T")[0]; 
+                            const tzOffset = 7 * 60 * 60 * 1000; // +7 ชั่วโมง
+                            const localDate = new Date(d.getTime() + tzOffset);
+                            return localDate.toISOString().split("T")[0];
+                        };
+
                         response.data.forEach(item => {
                             let statusColor = "bg-yellow-100 text-yellow-700";
                             if (item.status === "อนุมัติแล้ว") statusColor = "bg-emerald-100 text-emerald-700";
                             if (item.status === "ปฏิเสธ") statusColor = "bg-rose-100 text-rose-700";
 
-                            // ปรับการแปลงแสดงผลวันที่ให้อ่านง่ายขึ้น
-                            let sDate = item.startDate ? item.startDate.split("T")[0] : "-";
-                            let eDate = item.endDate ? item.endDate.split("T")[0] : "-";
+                            let sDate = formatDateTH(item.startDate);
+                            let eDate = formatDateTH(item.endDate);
 
                             const card = `
                                 <div class="border border-slate-100 rounded-xl p-4 shadow-sm bg-slate-50">
