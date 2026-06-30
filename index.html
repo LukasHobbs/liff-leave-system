@@ -41,7 +41,7 @@
                 </div>
                 <div>
                     <div class="flex justify-between items-center mb-1">
-                        <label id="quotaLabel" class="block text-xs font-medium text-slate-500">คงเหลือ -- วัน รูปแบบ</label>
+                        <label id="quotaLabel" class="block text-xs font-medium text-slate-500">คงเหลือ -- วัน</label>
                     </div>
                     <select id="leaveFormat" class="w-full border border-slate-200 rounded-xl p-3 text-sm bg-white focus:outline-none focus:border-blue-500" required>
                         <option value="เต็มวัน">เต็มวัน</option>
@@ -113,7 +113,6 @@
         }
 
         function fetchEmployeeData(userId, displayName) {
-            // ใช้คำสั่งดึงข้อมูลแบบ JSONP หรือเรียกปกติผ่านตัวปลดล็อกหลังบ้าน
             fetch(`${GAS_WEB_APP_URL}?action=getProfile&userId=${userId}`)
                 .then(res => res.json())
                 .then(data => {
@@ -131,7 +130,7 @@
                 })
                 .catch(err => {
                     document.getElementById("loading").classList.add("hidden");
-                    alert("⚠️ เปิดแอปและดึงข้อมูลโปรไฟล์ไม่สำเร็จเนื่องจากติดปัญหาดึงสิทธิ์ (CORS/URL)\nกรุณาตรวจสอบว่าใส่ลิงก์ URL หลังบ้านอันล่าสุดถูกตัวไหม");
+                    alert("⚠️ เปิดแอปและดึงข้อมูลโปรไฟล์ไม่สำเร็จเนื่องจากติดปัญหาดึงสิทธิ์ (CORS/URL)");
                 });
         }
 
@@ -159,7 +158,6 @@
                 document.getElementById("endDate").disabled = true;
                 document.getElementById("endDate").classList.add("bg-slate-100");
                 
-                // 🌟 ใส่ตัวเลขพร้อมต่อท้ายด้วยคำว่า "วัน"
                 totalDaysInput.value = "0.5 วัน";
                 return;
             }
@@ -183,36 +181,37 @@
                 return;
             }
 
-            // 🌟 ใส่ตัวเลขพร้อมต่อท้ายด้วยคำว่า "วัน"
             totalDaysInput.value = daysDiff + " วัน";
         }
 
-        // 🔌 สั่งเชื่อมสายไฟดักจับสัญญาณ: เมื่อมีการเปลี่ยนค่าในฟอร์ม ให้สั่งคำนวณ Real-time ทันที
+        // 🔌 สั่งเชื่อมสายไฟดักจับสัญญาณเพื่อคำนวณ Real-time
         document.getElementById("leaveFormat").addEventListener("change", calculateLeaveDays);
         document.getElementById("startDate").addEventListener("change", calculateLeaveDays);
         document.getElementById("endDate").addEventListener("change", calculateLeaveDays);
         
-        // 🚨 แถมให้อีก 1 เส้น: เมื่อพนักงานเปลี่ยนประเภทการลา (ลาป่วย/ลากิจ) ให้รีเซ็ตการคำนวณใหม่ด้วย ป้องกันค่าเพี้ยน
-        document.getElementById("leaveType").addEventListener("change", calculateLeaveDays);
-
-        document.getElementById("leaveType").addEventListener("change", function() { updateQuotaLabel(this.value); });
+        // เมื่อเปลี่ยนประเภทการลา ให้ทำการอัปเดตยอดคงเหลือ และรีเซ็ตคำนวณป้องกันค่าเพี้ยน
+        document.getElementById("leaveType").addEventListener("change", function() { 
+            updateQuotaLabel(this.value); 
+            calculateLeaveDays();
+        });
 
         document.getElementById("leaveForm").addEventListener("submit", function(e) {
             e.preventDefault();
             if (!globalEmpId) return alert("ไม่สามารถทำรายการได้");
             document.getElementById("loading").classList.remove("hidden");
 
+            // 🌟 แก้ไข: เพิ่มพารามิเตอร์ endDate และจัดการแปลงค่า totalDays ส่งไปหลังบ้านอย่างถูกต้อง
             const formData = {
                 action: "submitLeave",
                 empId: globalEmpId,
                 leaveType: document.getElementById("leaveType").value,
                 leaveFormat: document.getElementById("leaveFormat").value,
                 startDate: document.getElementById("startDate").value,
+                endDate: document.getElementById("endDate").value, 
                 totalDays: parseFloat(document.getElementById("totalDays").value.replace(" วัน", "")),
                 reason: document.getElementById("reason").value
             };
 
-            // 🌟 ปรับปรุงการส่งฟอร์มเพื่อหลบหลีกการบล็อกสิทธิ์ CORS 100%
             fetch(GAS_WEB_APP_URL, {
                 method: "POST",
                 mode: "no-cors",
@@ -233,5 +232,3 @@
 
         window.onload = initLiff;
     </script>
-</body>
-</html>
