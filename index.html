@@ -83,7 +83,7 @@
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             <span class="text-[10px] font-medium">ประวัติการลา</span>
         </button>
-        <button onclick="alert('ฟีเจอร์เช็กยอดทำงานอัตโนมัติ')" class="flex flex-col items-center gap-1 text-slate-400 flex-1">
+        <button onclick="openQuotaModal()" class="flex flex-col items-center gap-1 text-slate-400 hover:text-[#1e40af] flex-1">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
             <span class="text-[10px] font-medium">วันลาคงเหลือ</span>
         </button>
@@ -98,6 +98,23 @@
             <div id="historyList" class="overflow-y-auto py-3 space-y-3 flex-1 text-sm">
                 <p class="text-center text-slate-400 py-10">กำลังโหลดข้อมูลประวัติการลา...</p>
             </div>
+        </div>
+    </div>
+
+    <div id="quotaModal" class="fixed inset-0 bg-black/50 flex flex-col justify-end z-50 hidden transition-all duration-300">
+        <div class="bg-white rounded-t-3xl max-w-md w-full mx-auto p-5 max-h-[85vh] flex flex-col shadow-2xl">
+            <div class="flex justify-between items-center pb-4 border-b border-slate-100">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">📊</span>
+                    <h3 class="text-base font-bold text-slate-800">สิทธิ์วันลาคงเหลือของคุณ</h3>
+                </div>
+                <button onclick="closeQuotaModal()" class="text-slate-400 hover:text-slate-600 font-bold text-sm bg-slate-100 px-3 py-1 rounded-xl">ปิด</button>
+            </div>
+            
+            <div id="quotaContainer" class="overflow-y-auto py-4 space-y-4 flex-1 text-sm">
+                </div>
+            
+            <p class="text-center text-[10px] text-slate-400 mt-2">หมายเหตุ: ข้อมูลอัปเดตล่าสุดตามระบบฐานข้อมูล HR</p>
         </div>
     </div>
 
@@ -266,6 +283,79 @@
         // 🔒 ฟังก์ชันสั่งซ่อนหน้าต่างป๊อปอัปประวัติ
         function closeHistoryModal() {
             document.getElementById("historyModal").classList.add("hidden");
+        }
+
+        // 📊 🔓 ฟังก์ชันเปิดหน้าต่างโควตาวันลาคงเหลือ และฉีดดีไซน์การ์ดสวยงามมีอิโมจิ
+        function openQuotaModal() {
+            if (!globalQuota || globalQuota.sickTotal === undefined) {
+                return alert("กำลังโหลดข้อมูลระบบ หรือไม่พบข้อมูลสิทธิ์วันลาของคุณ");
+            }
+            
+            const modal = document.getElementById("quotaModal");
+            modal.classList.remove("hidden");
+            
+            const container = document.getElementById("quotaContainer");
+            
+            // คำนวณยอดคงเหลือของแต่ละประเภทลา
+            let sickLeft = globalQuota.sickTotal - globalQuota.sickUsed;
+            let personalLeft = globalQuota.personalTotal - globalQuota.personalUsed;
+            let vacationLeft = globalQuota.vacationTotal - globalQuota.vacationUsed;
+
+            // ฉีดโครงสร้าง HTML การ์ดสามสี ดีไซน์มินิมอล มีอิโมจิและเกจแถบพลังความคืบหน้า
+            container.innerHTML = `
+                <div class="border border-red-100 rounded-2xl p-4 bg-gradient-to-br from-red-50/50 to-white shadow-sm">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center text-xl">🤒</div>
+                            <div>
+                                <h4 class="font-bold text-slate-700">ลาป่วย</h4>
+                                <p class="text-[11px] text-slate-400">ใช้ไปแล้ว ${globalQuota.sickUsed} / ทั้งหมด ${globalQuota.sickTotal} วัน</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xl font-bold text-red-600">${sickLeft}</span>
+                            <span class="text-xs text-slate-400 block font-medium">วันคงเหลือ</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border border-amber-100 rounded-2xl p-4 bg-gradient-to-br from-amber-50/50 to-white shadow-sm">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-xl">💼</div>
+                            <div>
+                                <h4 class="font-bold text-slate-700">ลากิจ</h4>
+                                <p class="text-[11px] text-slate-400">ใช้ไปแล้ว ${globalQuota.personalUsed} / ทั้งหมด ${globalQuota.personalTotal} วัน</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xl font-bold text-amber-600">${personalLeft}</span>
+                            <span class="text-xs text-slate-400 block font-medium">วันคงเหลือ</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border border-blue-100 rounded-2xl p-4 bg-gradient-to-br from-blue-50/50 to-white shadow-sm">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-xl">🌴</div>
+                            <div>
+                                <h4 class="font-bold text-slate-700">ลาพักร้อน</h4>
+                                <p class="text-[11px] text-slate-400">ใช้ไปแล้ว ${globalQuota.vacationUsed} / ทั้งหมด ${globalQuota.vacationTotal} วัน</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xl font-bold text-blue-600">${vacationLeft}</span>
+                            <span class="text-xs text-slate-400 block font-medium">วันคงเหลือ</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 📊 🔒 ฟังก์ชันสั่งซ่อนหน้าต่างป๊อปอัปยอดคงเหลือ
+        function closeQuotaModal() {
+            document.getElementById("quotaModal").classList.add("hidden");
         }
 
         // 🔌 สั่งเชื่อมสายไฟดักจับสัญญาณเพื่อคำนวณ Real-time
