@@ -79,7 +79,7 @@
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
             <span class="text-[10px] font-medium">ยื่นคำขอ</span>
         </button>
-        <button onclick="alert('ฟีเจอร์ประวัติกำลังพัฒนา')" class="flex flex-col items-center gap-1 text-slate-400 flex-1">
+        <button onclick="openHistoryModal()" class="flex flex-col items-center gap-1 text-slate-400 hover:text-[#1e40af] flex-1">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             <span class="text-[10px] font-medium">ประวัติการลา</span>
         </button>
@@ -87,6 +87,18 @@
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
             <span class="text-[10px] font-medium">วันลาคงเหลือ</span>
         </button>
+    </div>
+
+    <div id="historyModal" class="fixed inset-0 bg-black/50 flex flex-col justify-end z-50 hidden transition-all duration-300">
+        <div class="bg-white rounded-t-3xl max-w-md w-full mx-auto p-5 max-h-[80vh] flex flex-col shadow-2xl">
+            <div class="flex justify-between items-center pb-3 border-b border-slate-100">
+                <h3 class="text-base font-bold text-slate-800">ประวัติการลาของคุณ</h3>
+                <button onclick="closeHistoryModal()" class="text-slate-400 hover:text-slate-600 font-bold text-sm bg-slate-100 px-3 py-1 rounded-xl">ปิด</button>
+            </div>
+            <div id="historyList" class="overflow-y-auto py-3 space-y-3 flex-1 text-sm">
+                <p class="text-center text-slate-400 py-10">กำลังโหลดข้อมูลประวัติการลา...</p>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -155,22 +167,22 @@
             // 1. กรณีลา "ครึ่งวันเช้า" หรือ "ครึ่งวันบ่าย"
             if (leaveFormat === "ครึ่งวันเช้า" || leaveFormat === "ครึ่งวันบ่าย") {
                 document.getElementById("endDate").value = startDateInput;
-                document.getElementById("endDate").readOnly = true; // ล็อกให้อ่านได้อย่างเดียว ห้ามพนักงานกดเลือกเอง
+                document.getElementById("endDate").readOnly = true; 
                 document.getElementById("endDate").classList.add("bg-slate-100");
                 
                 totalDaysInput.value = "0.5 วัน";
                 return;
             }
 
-            // 2. กรณีลา "เต็มวัน" -> ต้องปลดล็อกทุกอย่างเพื่อให้พนักงานคลิกเลือกวันสิ้นสุดได้เอง
+            // 2. กรณีลา "เต็มวัน" -> ปลดล็อกทุกอย่างเพื่อให้เลือกวันที่สิ้นสุดได้เอง
             document.getElementById("endDate").disabled = false;
-            document.getElementById("endDate").readOnly = false; // ปลดล็อก readOnly ออกอย่างเด็ดขาด
+            document.getElementById("endDate").readOnly = false; 
             document.getElementById("endDate").classList.remove("bg-slate-100");
 
-            // ✨ แถมบรรทัดนี้: ถ้าเปลี่ยนกลับมาเป็น "เต็มวัน" ให้ล้างวันที่สิ้นสุดเดิมออก เพื่อให้พนักงานกดเลือกใหม่เอง
+            // ถ้าสลับกลับมาจากครึ่งวัน ให้เคลียร์ช่องเพื่อป้องกันค่าค้างคัดลอก
             if (leaveFormat === "เต็มวัน" && totalDaysInput.value === "0.5 วัน") {
-            document.getElementById("endDate").value = "";
-            totalDaysInput.value = "";
+                document.getElementById("endDate").value = "";
+                totalDaysInput.value = "";
             }
             
             if (!endDateInput) return;
@@ -191,12 +203,67 @@
             totalDaysInput.value = daysDiff + " วัน";
         }
 
+        // 🔓 🌟 ฟังก์ชันเปิดหน้าต่างประวัติการลา และยิงข้อมูลไปขอประวัติจาก Sheets
+        function openHistoryModal() {
+            if (!globalEmpId) return alert("ไม่สามารถดึงประวัติได้ เนื่องจากไม่พบรหัสพนักงาน");
+            
+            const modal = document.getElementById("historyModal");
+            modal.classList.remove("hidden");
+            
+            const listContainer = document.getElementById("historyList");
+            listContainer.innerHTML = '<p class="text-center text-slate-400 py-10 animate-pulse">กำลังโหลดประวัติ...</p>';
+
+            fetch(`${GAS_WEB_APP_URL}?action=getHistory&empId=${globalEmpId}`)
+                .then(res => res.json())
+                .then(response => {
+                    if (response.status === "success" && response.data.length > 0) {
+                        listContainer.innerHTML = ""; 
+                        
+                        response.data.forEach(item => {
+                            let statusColor = "bg-yellow-100 text-yellow-700";
+                            if (item.status === "อนุมัติแล้ว") statusColor = "bg-emerald-100 text-emerald-700";
+                            if (item.status === "ปฏิเสธ") statusColor = "bg-rose-100 text-rose-700";
+
+                            // ปรับการแปลงแสดงผลวันที่ให้อ่านง่ายขึ้น
+                            let sDate = item.startDate ? item.startDate.split("T")[0] : "-";
+                            let eDate = item.endDate ? item.endDate.split("T")[0] : "-";
+
+                            const card = `
+                                <div class="border border-slate-100 rounded-xl p-4 shadow-sm bg-slate-50">
+                                    <div class="flex justify-between items-start mb-1">
+                                        <div>
+                                            <span class="text-[10px] font-mono text-slate-400 block">${item.requestId}</span>
+                                            <span class="font-bold text-slate-700 text-sm">${item.leaveType} (${item.leaveFormat})</span>
+                                        </div>
+                                        <span class="text-xs px-2.5 py-0.5 rounded-full font-medium ${statusColor}">${item.status}</span>
+                                    </div>
+                                    <div class="text-xs text-slate-500 space-y-0.5 mt-2">
+                                        <p>📅 วันที่ลา: ${sDate} ถึง ${eDate}</p>
+                                        <p>⏳ จำนวน: <span class="font-semibold text-slate-700">${item.totalDays} วัน</span></p>
+                                    </div>
+                                </div>
+                            `;
+                            listContainer.innerHTML += card;
+                        });
+                    } else {
+                        listContainer.innerHTML = '<p class="text-center text-slate-400 py-10">🌴 ยังไม่มีประวัติการลาในระบบ</p>';
+                    }
+                })
+                .catch(err => {
+                    listContainer.innerHTML = '<p class="text-center text-rose-500 py-10">❌ เกิดข้อผิดพลาดในการดึงข้อมูล</p>';
+                });
+        }
+
+        // 🔒 ฟังก์ชันสั่งซ่อนหน้าต่างป๊อปอัปประวัติ
+        function closeHistoryModal() {
+            document.getElementById("historyModal").classList.add("hidden");
+        }
+
         // 🔌 สั่งเชื่อมสายไฟดักจับสัญญาณเพื่อคำนวณ Real-time
         document.getElementById("leaveFormat").addEventListener("change", calculateLeaveDays);
         document.getElementById("startDate").addEventListener("change", calculateLeaveDays);
         document.getElementById("endDate").addEventListener("change", calculateLeaveDays);
         
-        // เมื่อเปลี่ยนประเภทการลา ให้ทำการอัปเดตยอดคงเหลือ และรีเซ็ตคำนวณป้องกันค่าเพี้ยน
         document.getElementById("leaveType").addEventListener("change", function() { 
             updateQuotaLabel(this.value); 
             calculateLeaveDays();
@@ -207,7 +274,6 @@
             if (!globalEmpId) return alert("ไม่สามารถทำรายการได้");
             document.getElementById("loading").classList.remove("hidden");
 
-            // 🌟 แก้ไข: เพิ่มพารามิเตอร์ endDate และจัดการแปลงค่า totalDays ส่งไปหลังบ้านอย่างถูกต้อง
             const formData = {
                 action: "submitLeave",
                 empId: globalEmpId,
@@ -239,3 +305,5 @@
 
         window.onload = initLiff;
     </script>
+</body>
+</html>
