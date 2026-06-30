@@ -152,10 +152,10 @@
 
             if (!startDateInput) return;
 
-            // 1. กรณีลา "ครึ่งวันเช้า" หรือ "ครึ่งวันบ่าย"
+            // 1. กรณีลา "ครึ่งวันเช้า" หรือ "ครึ่งวันบ่าย" (เวอร์ชันแก้บั๊กส่งค่า End Date)
             if (leaveFormat === "ครึ่งวันเช้า" || leaveFormat === "ครึ่งวันบ่าย") {
                 document.getElementById("endDate").value = startDateInput;
-                document.getElementById("endDate").disabled = true;
+                document.getElementById("endDate").readOnly = true; // ✨ เปลี่ยนเป็น readOnly เพื่อให้ระบบยอมส่งค่า
                 document.getElementById("endDate").classList.add("bg-slate-100");
                 
                 totalDaysInput.value = "0.5 วัน";
@@ -163,7 +163,7 @@
             }
 
             // 2. กรณีลา "เต็มวัน"
-            document.getElementById("endDate").disabled = false;
+            document.getElementById("endDate").readOnly = false; // ✨ ปลดล็อกให้คีย์ได้ปกติ
             document.getElementById("endDate").classList.remove("bg-slate-100");
             
             if (!endDateInput) return;
