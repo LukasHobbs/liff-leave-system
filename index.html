@@ -143,7 +143,7 @@
             document.getElementById("quotaLabel").innerText = `คงเหลือ ${total - used} วัน`;
         }
 
-        // 🌓 🌕 ฟังก์ชันคำนวณจำนวนวันลาอัตโนมัติ (เวอร์ชันเติมคำว่า "วัน" ต่อท้าย)
+        // 🌓 🌕 ฟังก์ชันคำนวณจำนวนวันลาอัตโนมัติ (เวอร์ชันเปิด-ปิดล็อกช่อง endDate อย่างสมบูรณ์)
         function calculateLeaveDays() {
             const leaveFormat = document.getElementById("leaveFormat").value;
             const startDateInput = document.getElementById("startDate").value;
@@ -152,19 +152,26 @@
 
             if (!startDateInput) return;
 
-            // 1. กรณีลา "ครึ่งวันเช้า" หรือ "ครึ่งวันบ่าย" (เวอร์ชันแก้บั๊กส่งค่า End Date)
+            // 1. กรณีลา "ครึ่งวันเช้า" หรือ "ครึ่งวันบ่าย"
             if (leaveFormat === "ครึ่งวันเช้า" || leaveFormat === "ครึ่งวันบ่าย") {
                 document.getElementById("endDate").value = startDateInput;
-                document.getElementById("endDate").readOnly = true; // ✨ เปลี่ยนเป็น readOnly เพื่อให้ระบบยอมส่งค่า
+                document.getElementById("endDate").readOnly = true; // ล็อกให้อ่านได้อย่างเดียว ห้ามพนักงานกดเลือกเอง
                 document.getElementById("endDate").classList.add("bg-slate-100");
                 
                 totalDaysInput.value = "0.5 วัน";
                 return;
             }
 
-            // 2. กรณีลา "เต็มวัน"
-            document.getElementById("endDate").readOnly = false; // ✨ ปลดล็อกให้คีย์ได้ปกติ
+            // 2. กรณีลา "เต็มวัน" -> ต้องปลดล็อกทุกอย่างเพื่อให้พนักงานคลิกเลือกวันสิ้นสุดได้เอง
+            document.getElementById("endDate").disabled = false;
+            document.getElementById("endDate").readOnly = false; // ปลดล็อก readOnly ออกอย่างเด็ดขาด
             document.getElementById("endDate").classList.remove("bg-slate-100");
+
+            // ✨ แถมบรรทัดนี้: ถ้าเปลี่ยนกลับมาเป็น "เต็มวัน" ให้ล้างวันที่สิ้นสุดเดิมออก เพื่อให้พนักงานกดเลือกใหม่เอง
+            if (leaveFormat === "เต็มวัน" && totalDaysInput.value === "0.5 วัน") {
+            document.getElementById("endDate").value = "";
+            totalDaysInput.value = "";
+            }
             
             if (!endDateInput) return;
 
